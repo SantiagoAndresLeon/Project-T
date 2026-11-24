@@ -1,0 +1,69 @@
+PROYECTO: Qwen3 1.7B + ESP32 + INMP441 + OLED (servidor Windows)
+============================================================
+1. INSTALA OLLAMA desde https://ollama.com/download
+   Abre PowerShell:
+   ollama pull qwen3:1.7b
+   ollama run qwen3:1.7b
+   (Puedes salir del chat con /bye. La aplicacion Ollama debe seguir ejecutandose.)
+   ollama ps  -> comprueba el PROCESSOR (GPU/CPU).
+
+2. INSTALA PYTHON 3.11 o 3.12 para Windows (Python debe estar en PATH).
+   Descomprime este paquete en una carpeta y abre PowerShell dentro.
+   py -m venv .venv
+   .\.venv\Scripts\python.exe -m pip install --upgrade pip
+   .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+   .\.venv\Scripts\python.exe -m uvicorn servidor:app --host 0.0.0.0 --port 8000
+   Para comprobar el servidor desde el navegador del PC:
+   http://127.0.0.1:8000/health
+   Esperado: {"status":"ok","model":"qwen3:1.7b"}
+   La primera transcripcion descargara un modelo Whisper tiny desde Internet.
+
+3. AVERIGUA LA IP LOCAL DEL PC
+   ipconfig
+   Busca "Direccion IPv4", por ejemplo 192.168.1.50.
+   PC y ESP32 deben estar en la MISMA RED durante las pruebas.
+   En Windows, permite el puerto 8000 en el firewall solo para red PRIVADA.
+   NO abras el puerto 8000 al internet publico.
+
+4. EN ARDUINO IDE
+   Placa: ESP32 Dev Module (ESP32 clasico).
+   Instala bibliotecas: "Adafruit SSD1306", "Adafruit GFX Library",
+   y "WebSockets" de Markus Sattler (Links2004).
+   Abre ESP32_Qwen3_Cliente/ESP32_Qwen3_Cliente.ino
+   Cambia WIFI_SSID, WIFI_PASSWORD, SERVER_IP, DEVICE_ID si es necesario.
+   DEVICE_TOKEN ya coincide con el valor demo por defecto del servidor.
+   Carga el sketch y abre Monitor Serie a 115200 baudios, linea nueva.
+
+5. PRUEBA PRIMERO POR TEXTO
+   Escribe: Hola, quien eres?
+   La pantalla OLED mostrara la respuesta (paginas de 3.5 segundos).
+   Para probar identidades distintas cambia DEVICE_ID a ESP32_002 o _003.
+   El servidor conserva un historial BREVE en RAM para cada DEVICE_ID.
+
+6. PRUEBA EL MICROFONO
+   En monitor serie escribe: v
+   Habla durante los siguientes 5 segundos.
+   Se enviara audio PCM16 mono de 16 kHz en bloques al servidor.
+   Faster-whisper (CPU) transcribe el español y Qwen responde a la OLED.
+   Si no entiende la voz, prueba acercarte al microfono y cambiar
+   ASR_MODEL de "tiny" a "base" en servidor.py y reinicia servidor.
+   Mejorable: activacion automatica/VAD, enviar audio a demanda, TTS.
+
+PINOUT (NO conectes INMP441 a 5V):
+OLED  VCC -> 3V3; GND -> GND; SDA -> GPIO21; SCL -> GPIO22
+INMP441 VDD -> 3V3; GND -> GND; SCK -> GPIO26;
+INMP441 WS -> GPIO25; SD -> GPIO33; L/R -> GND
+Comprueba la serigrafia fisica del microfono antes de alimentarlo.
+
+SEGURIDAD / DESPLIEGUE
+Solo para pruebas LAN. La clave demo no sustituye autenticacion segura.
+Para otras casas usar WSS (TLS) con dominio/tunel seguro, clave por
+ESP32, autentificacion fuerte, proteccion contra abusos y almacenamiento
+persistente de historial, sin exponer Ollama directamente a Internet.
+
+LIMITACIONES
+La primera prueba usa el monitor serie para activar la voz y no detecta
+automaticamente cuando alguien empieza/termina de hablar.
+La OLED SSD1306 usa letras pequenas y pagina texto; no reproduce audio.
+El procesamiento de Whisper se ejecuta en CPU para reservar VRAM a Qwen.
+No probado en este equipo fisico; puede requerir ajustes de version de ESP32.
