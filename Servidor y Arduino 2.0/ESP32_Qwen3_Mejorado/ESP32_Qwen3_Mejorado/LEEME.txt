@@ -1,0 +1,31 @@
+ESP32 + Qwen3 1.7B | revision OLED / INMP441
+
+CAMBIOS
+- OLED SSD1306 128x64: texto de respuesta al doble de tamano; titulo pequeno. Paginacion automatica cada 4 s.
+- INMP441: ganancia inicial x8 al convertir 32->16 bits, saturacion segura y diagnosticos pico/RMS/numero de muestras.
+- Servidor Python: Whisper base (en vez de tiny), normalizacion moderada, registro de amplitud y guardado del ultimo WAV para escuchar como llega el microfono.
+
+CONEXIONES INMP441: SCK->GPIO26, WS->GPIO25, SD->GPIO33, L/R->GND, VDD->3V3, GND->GND.
+CONEXIONES OLED: SDA->GPIO21, SCL->GPIO22, VCC->3V3, GND->GND.
+
+INSTALACION
+1. Haz una copia de respaldo de tus archivos anteriores.
+2. Edita ESP32_Qwen3_Mejorado.ino: WIFI_SSID, WIFI_PASSWORD, SERVER_IP.
+3. En Arduino IDE: placa ESP32 Dev Module, puerto correcto. Librerias Adafruit GFX, Adafruit SSD1306, WebSockets (Markus Sattler).
+4. Sustituye el servidor.py de tu carpeta Asistente_Qwen3_ESP32 por el servidor.py de este paquete.
+5. En el PowerShell que corre uvicorn, CTRL+C y reinicia:
+   .\.venv\Scripts\python.exe -m uvicorn servidor:app --host 0.0.0.0 --port 8000
+6. Manten Ollama encendido. Carga el nuevo sketch, Monitor Serie 115200, New Line.
+7. Pregunta por texto para comprobar OLED. Luego envia v y di una frase clara a 10-20 cm del INMP441 durante 5 s.
+8. Mira en Monitor Serie: numero de muestras, pico, RMS, recortes. En PowerShell: [AUDIO] bytes, [WHISPER] pico/RMS/transcripcion.
+9. Abre ultima_grabacion_ESP32_001.wav (guardado por el servidor) para escuchar si el audio es inteligible. Se sobrescribe en cada prueba.
+
+INTERPRETACION
+- Pico ~0 o RMS ~0: revisar SD, L/R conectado a GND, SCK, WS y alimentacion.
+- Pocos datos (<80000 muestras): problema de lectura/transmision, no del idioma.
+- Pico a 32767 y muchos recortes: baja AUDIO_GAIN de 8 a 4 o 2.
+- Pico bajo y voz suave: aumenta AUDIO_GAIN a 16 si no hay recortes.
+- Oyes voz clara en WAV pero Whisper falla: revisa salida [WHISPER] y prueba otro modelo ASR.
+- El servidor guarda audio local por defecto para depuracion: pon SAVE_DEBUG_WAV=0 para deshabilitarlo, o elimina los WAV tras la prueba.
+
+Este prototipo es para la LAN. No expongas el puerto 8000 directamente a internet.
